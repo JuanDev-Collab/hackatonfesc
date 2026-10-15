@@ -22,8 +22,9 @@ ROUTE = re.compile(r"^/afiliados/([0-9]+)$")
 QUERY = """
 SELECT a.nro_doc, a.nom1, a.nom2, a.ape1, a.ape2, a.est_afi, e.nom_emp
 FROM afi_mae a
-JOIN empresa e ON e.cod_emp = a.cod_emp
+LEFT JOIN empresa e ON e.cod_emp = a.cod_emp
 WHERE a.nro_doc = %s
+ORDER BY a.ctid
 LIMIT 1
 """
 
@@ -50,8 +51,10 @@ def find_member(documento):
     if row is None:
         return None
     nro_doc, nom1, nom2, ape1, ape2, est_afi, nom_emp = row
-    nombre = nom1 + " " + nom2 + " " + ape1 + " " + ape2
-    return {"documento": nro_doc, "nombre": nombre.strip(), "estado": ESTADOS[est_afi], "empresa": nom_emp}
+    # \copy carga los campos vacíos del CSV como NULL (p. ej. NOM2): se omiten al armar el nombre.
+    nombre = " ".join(p.strip() for p in (nom1, nom2, ape1, ape2) if p and p.strip())
+    estado = ESTADOS.get((est_afi or "").strip(), est_afi)
+    return {"documento": nro_doc, "nombre": nombre, "estado": estado, "empresa": nom_emp}
 
 
 class Handler(BaseHTTPRequestHandler):
