@@ -1,0 +1,19 @@
+$ docker compose ps -a
+SERVICE         STATUS
+cierre-api      Up 16 seconds
+cierre-db       Up 20 seconds (healthy)
+cierre-worker   Exited (1) 16 seconds ago
+
+$ docker compose logs cierre-worker | tail -3
+[2026-10-15T04:53:31Z] [ERROR] codigo=CIE-1107 WORKER_INTERVAL_SECONDS debe ser un entero de segundos; valor recibido: '30s'
+
+# Despues de cambiar WORKER_INTERVAL_SECONDS=30s por 30
+$ docker compose ps -a
+SERVICE         STATUS
+cierre-api      Up 56 seconds
+cierre-db       Up 14 seconds (healthy)
+cierre-worker   Up 11 seconds
+
+$ docker compose logs cierre-worker | tail -2
+[2026-10-15T04:54:16Z] [INFO] cierre-worker iniciado; intervalo=30s
+[2026-10-15T04:54:20Z] [ERROR] codigo=CIE-2210 sin conexión a la base: could not translate host name "cierre-database" to address: Name or service not known
