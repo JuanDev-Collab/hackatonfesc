@@ -14,6 +14,7 @@ import os
 import re
 import sys
 from collections import Counter
+from datetime import date
 
 BASE = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 DATA = os.path.join(BASE, "data")
@@ -30,6 +31,23 @@ def leer_csv(nombre, separador=","):
         for fila in csv.DictReader(archivo, delimiter=separador):
             filas.append({k.strip(): (v or "").strip() for k, v in fila.items() if k is not None})
         return filas
+
+
+def normalizar_fecha(texto):
+    """Devuelve la fecha en YYYY-MM-DD o None si no es una fecha real."""
+    formatos = [
+        (r"(\d{4})-(\d{2})-(\d{2})", (1, 2, 3)),  # YYYY-MM-DD (oficial)
+        (r"(\d{2})/(\d{2})/(\d{4})", (3, 2, 1)),  # DD/MM/YYYY
+        (r"(\d{4})(\d{2})(\d{2})", (1, 2, 3)),    # YYYYMMDD
+    ]
+    for patron, (y, m, d) in formatos:
+        match = re.fullmatch(patron, texto)
+        if match:
+            try:
+                return date(int(match.group(y)), int(match.group(m)), int(match.group(d))).isoformat()
+            except ValueError:
+                return None
+    return None
 
 
 def top_error():
@@ -90,6 +108,10 @@ def main():
     for doc in orden:
         fila = universo[doc]
         estado = fila["EST_AFI"]
+
+        # Regla 5: la fecha nunca excluye; solo se reporta si no es una fecha real.
+        if normalizar_fecha(fila["FEC_AFI"]) is None:
+            excepciones.append((doc, "FECHA_INVALIDA", "FEC_AFI no interpretable: '{0}'".format(fila["FEC_AFI"])))
 
         # Regla 2: solo A e I son códigos válidos.
         if estado not in ESTADOS:
