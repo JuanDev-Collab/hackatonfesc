@@ -1,0 +1,6 @@
+# Los scripts corren en Linux: forzar finales de línea LF aunque se haga commit desde Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
