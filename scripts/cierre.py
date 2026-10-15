@@ -3,7 +3,7 @@
 
 Lee los CSV de data/ (solo lectura, nunca los mueve ni los modifica), aplica las reglas
 de docs/diccionario.md y genera en output/:
-  afiliados_activos.csv, excepciones.csv y totales.txt
+  afiliados_activos.csv, excepciones.csv, totales.txt y top_error.txt
 
 Es repetible: cada ejecución reescribe output/ desde cero y produce el mismo resultado.
 Uso: python3 scripts/cierre.py [carpeta_del_kit]
@@ -17,9 +17,11 @@ from collections import Counter
 
 BASE = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 DATA = os.path.join(BASE, "data")
+LOGS = os.path.join(BASE, "logs")
 SALIDA = os.path.join(BASE, "output")
 
 ESTADOS = {"A": "ACTIVO", "I": "INACTIVO"}
+CODIGO_ERROR = re.compile(r"CIE-\d{4}")
 
 
 def leer_csv(nombre, separador=","):
@@ -28,6 +30,23 @@ def leer_csv(nombre, separador=","):
         for fila in csv.DictReader(archivo, delimiter=separador):
             filas.append({k.strip(): (v or "").strip() for k, v in fila.items() if k is not None})
         return filas
+
+
+def top_error():
+    """Código CIE-#### más frecuente entre las líneas de error de los tres logs."""
+    conteo = Counter()
+    for nombre in ("api.log", "worker.log", "database.log"):
+        ruta = os.path.join(LOGS, nombre)
+        if not os.path.exists(ruta):
+            continue
+        with open(ruta, encoding="utf-8", errors="replace") as archivo:
+            for linea in archivo:
+                if "ERROR" in linea:
+                    conteo.update(CODIGO_ERROR.findall(linea))
+    if not conteo:
+        return "", 0
+    # Mayor conteo; en empate, el código menor (orden estable).
+    return sorted(conteo.items(), key=lambda par: (-par[1], par[0]))[0]
 
 
 def main():
@@ -89,6 +108,8 @@ def main():
         nombre = " ".join(p for p in (fila["NOM1"], fila["NOM2"], fila["APE1"], fila["APE2"]) if p)
         activos.append([doc, nombre, "ACTIVO", cod_emp, empresas[cod_emp], str(conteo_ben[doc]), ultimo_aporte.get(doc, "")])
 
+    codigo, ocurrencias = top_error()
+
     os.makedirs(SALIDA, exist_ok=True)
     with open(os.path.join(SALIDA, "afiliados_activos.csv"), "w", encoding="utf-8", newline="") as archivo:
         escritor = csv.writer(archivo, lineterminator="\n")
@@ -103,8 +124,12 @@ def main():
         archivo.write("activos={0}\n".format(len(activos)))
         archivo.write("inactivos={0}\n".format(inactivos))
         archivo.write("excepciones={0}\n".format(len(excepciones)))
+    with open(os.path.join(SALIDA, "top_error.txt"), "w", encoding="utf-8", newline="\n") as archivo:
+        archivo.write("codigo_error={0}\n".format(codigo))
+        archivo.write("ocurrencias={0}\n".format(ocurrencias))
 
     print("total_afiliados={0} activos={1} inactivos={2} excepciones={3}".format(len(universo), len(activos), inactivos, len(excepciones)))
+    print("top_error {0} = {1}".format(codigo, ocurrencias))
 
 
 if __name__ == "__main__":
