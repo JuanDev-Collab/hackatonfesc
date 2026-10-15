@@ -51,11 +51,14 @@ def main():
     for doc in duplicados:
         excepciones.append((doc, "DUPLICADO", "documento repetido en AFI_MAE; se conserva la primera aparición"))
 
-    # Beneficiarios por afiliado.
+    # Beneficiarios por afiliado (regla 4: huérfanos).
     conteo_ben = Counter()
     for ben in beneficiarios:
         if ben["NRO_DOC_AFI"] in universo:
             conteo_ben[ben["NRO_DOC_AFI"]] += 1
+        else:
+            excepciones.append((ben["NRO_DOC_BEN"], "BENEFICIARIO_HUERFANO",
+                                "afiliado {0} no existe en AFI_MAE".format(ben["NRO_DOC_AFI"])))
 
     # Último periodo pagado por afiliado (regla 7).
     ultimo_aporte = {}

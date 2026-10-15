@@ -1,0 +1,12 @@
+$ psql: SELECT count(*), count(DISTINCT nro_doc) FROM afi_mae;
+ count | count 
+-------+-------
+  1500 |  1500
+(1 row)
+
+$ cut -d, -f2 output/excepciones.csv | sort | uniq -c
+     15 BENEFICIARIO_HUERFANO
+     14 CODIGO_INVALIDO
+     20 DUPLICADO
+     18 SIN_EMPRESA
+      1 tipo
