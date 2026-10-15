@@ -22,6 +22,7 @@ LOGS = os.path.join(BASE, "logs")
 SALIDA = os.path.join(BASE, "output")
 
 ESTADOS = {"A": "ACTIVO", "I": "INACTIVO"}
+SITUACION = {"VIGENTE": "A", "RETIRADO": "I"}
 CODIGO_ERROR = re.compile(r"CIE-\d{4}")
 
 
@@ -72,6 +73,7 @@ def main():
     empresas = {e["COD_EMP"]: e["NOM_EMP"] for e in leer_csv("EMPRESA.csv")}
     beneficiarios = leer_csv("AFI_BEN.csv")
     aportes = leer_csv("APORTES.csv")
+    extracto = leer_csv("extracto_caja_oriente.csv", separador=";")
 
     excepciones = []
 
@@ -129,6 +131,15 @@ def main():
 
         nombre = " ".join(p for p in (fila["NOM1"], fila["NOM2"], fila["APE1"], fila["APE2"]) if p)
         activos.append([doc, nombre, "ACTIVO", cod_emp, empresas[cod_emp], str(conteo_ben[doc]), ultimo_aporte.get(doc, "")])
+
+    # Regla 6: cruce con Caja Oriente (documentos de 12 dígitos con ceros a la izquierda).
+    for fila in extracto:
+        doc = fila["id_afiliado"].lstrip("0")
+        situacion = fila["situacion"].upper()
+        if doc not in universo:
+            excepciones.append((doc, "CRUCE_NO_COINCIDE", "documento no existe en AFI_MAE"))
+        elif SITUACION.get(situacion) != universo[doc]["EST_AFI"]:
+            excepciones.append((doc, "CRUCE_NO_COINCIDE", "Caja Oriente={0}; AFI_MAE={1}".format(situacion, universo[doc]["EST_AFI"])))
 
     codigo, ocurrencias = top_error()
 
