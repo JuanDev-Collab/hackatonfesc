@@ -19,7 +19,12 @@ services:
 
   cierre-api:
     build: ./services/api
-    env_file: .env
+    environment:
+      DATABASE_HOST: ${DATABASE_HOST:-cierre-db}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:-cierre}
+      DATABASE_USER: ${DATABASE_USER:-cierre}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-cierre}
     ports:
       - "${API_PORT:-8081}:8081"
     depends_on:
@@ -28,7 +33,13 @@ services:
 
   cierre-worker:
     build: ./services/worker
-    env_file: .env
+    environment:
+      DATABASE_HOST: ${DATABASE_HOST:-cierre-db}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:-cierre}
+      DATABASE_USER: ${DATABASE_USER:-cierre}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-cierre}
+      WORKER_INTERVAL_SECONDS: ${WORKER_INTERVAL_SECONDS:-30}
     depends_on:
       cierre-db:
         condition: service_healthy
